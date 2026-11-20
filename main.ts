@@ -14,5 +14,20 @@ const botDir = process.env.MAKEFUN_BOT_DIR ?? '/bot';
 const outputDir = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
 
 mkdirSync(outputDir, { recursive: true });
-const post = readFileSync(join(botDir, 'POST.json'));
+const postPath = join(botDir, 'POST.json');
+const post = readFileSync(postPath);
+
+// Check the file is really a post pointer before handing it on: it must
+// parse as JSON and hold a url that is a string starting with https://.
+// Anything else means the entry names no post, so fail loudly instead
+// of copying a broken pointer to the output.
+let parsed;
+try {
+  parsed = JSON.parse(post.toString('utf8'));
+} catch {
+  throw new Error('POST.json does not parse as JSON');
+}
+if (!parsed || typeof parsed.url !== 'string' || !parsed.url.startsWith('https://')) {
+  throw new Error('POST.json must hold a url string starting with https://');
+}
 writeFileSync(join(outputDir, 'POST.json'), post);
